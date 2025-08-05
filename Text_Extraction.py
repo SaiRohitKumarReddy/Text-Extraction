@@ -13,7 +13,7 @@ try:
     openai.api_key = st.secrets["OPENAI_API_KEY"]
     if not openai.api_key:
         raise ValueError("API key is empty")
-except Exception as e:
+except Exception:
     st.error("❌ OpenAI API key not found! Please check your secrets configuration.")
     st.info("""
     **Setup Instructions for Streamlit Cloud:**
@@ -22,7 +22,10 @@ except Exception as e:
     """)
     st.stop()
 
-# Function to clean and enhance image for better OCR
+
+# -------------------------
+# Image Preprocessing & OCR
+# -------------------------
 def preprocess_image_for_ocr(image):
     image = image.convert("L")  # Grayscale
     image = image.filter(ImageFilter.MedianFilter())
@@ -30,7 +33,7 @@ def preprocess_image_for_ocr(image):
     image = enhancer.enhance(2)  # Increase contrast
     return image
 
-# OCR text extraction from an image using pytesseract
+
 def extract_text_with_ocr(image):
     try:
         processed_image = preprocess_image_for_ocr(image)
@@ -40,12 +43,17 @@ def extract_text_with_ocr(image):
         st.error(f"OCR Error: {str(e)}")
         return ""
 
+
+# -------------------------
+# Text Detection Helpers
+# -------------------------
 def is_text_substantial(text, min_words=30):
     if not text or not text.strip():
         return False
     words = re.findall(r'\b\w+\b', text.lower())
     meaningful_words = [w for w in words if len(w) > 2]
     return len(meaningful_words) >= min_words
+
 
 def find_index_pages(file, file_type):
     index_keywords = [
@@ -71,7 +79,7 @@ def find_index_pages(file, file_type):
         elif file_type == 'docx':
             file.seek(0)
             doc = Document(file)
-            for i, para in enumerate(doc.paragraphs[:50]):
+            for para in doc.paragraphs[:50]:
                 text = para.text.lower()
                 for keyword in index_keywords:
                     if keyword in text:
@@ -81,6 +89,10 @@ def find_index_pages(file, file_type):
         st.warning(f"Error while searching for index pages: {str(e)}")
     return list(set(potential_pages))
 
+
+# -------------------------
+# PDF/DOCX Text Extraction
+# -------------------------
 def extract_text_from_pdf_pages(file, page_numbers):
     combined_text = ""
     try:
@@ -106,6 +118,7 @@ def extract_text_from_pdf_pages(file, page_numbers):
         st.warning(f"Error extracting text from multiple pages: {str(e)}")
     return combined_text.strip()
 
+
 def extract_text_from_pdf(file):
     text = ""
     try:
@@ -129,6 +142,7 @@ def extract_text_from_pdf(file):
             st.warning(f"OCR extraction failed: {str(e)}")
     return text.strip()
 
+
 def extract_text_from_docx(file):
     try:
         file.seek(0)
@@ -139,6 +153,10 @@ def extract_text_from_docx(file):
         st.error(f"DOCX extraction failed: {str(e)}")
         return ""
 
+
+# -------------------------
+# Smart Extraction Logic
+# -------------------------
 def extract_text_smart(file, file_type):
     extraction_log = []
     extraction_log.append("🔍 Attempting to extract text from first page...")
@@ -149,6 +167,7 @@ def extract_text_smart(file, file_type):
     if is_text_substantial(first_page_text):
         extraction_log.append("✅ First page contains substantial content")
         return first_page_text, extraction_log, "first_page"
+
     extraction_log.append("⚠️ First page has limited content, searching for index/table of contents...")
     index_pages = find_index_pages(file, file_type)
     if index_pages:
@@ -167,10 +186,14 @@ def extract_text_smart(file, file_type):
             extraction_log.append("❌ Index pages also contain limited content")
     else:
         extraction_log.append("❌ No index/table of contents found")
+
     extraction_log.append("📄 Using first page content as fallback")
     return first_page_text, extraction_log, "first_page_fallback"
 
-# Summarization using OpenAI SDK
+
+# -------------------------
+# OpenAI Summarization
+# -------------------------
 def summarize_text_with_openai(text, extraction_method):
     try:
         if extraction_method == "index_pages":
@@ -198,11 +221,15 @@ def summarize_text_with_openai(text, extraction_method):
 
         return response.choices[0].message["content"].strip()
 
-    except openai.error.Timeout:
+    except openai.APITimeoutError:
         return "❌ Request timed out. Please try again."
     except Exception as e:
         return f"❌ API Error: {str(e)}"
 
+
+# -------------------------
+# Streamlit UI
+# -------------------------
 def main():
     st.set_page_config(page_title="Smart Document Summarizer", page_icon="📄", layout="wide")
     st.title("📄 Smart Document Summarizer")
@@ -290,6 +317,7 @@ def main():
                         )
         else:
             st.error("❌ Unable to extract readable text. Try a different file.")
+
 
 if __name__ == "__main__":
     main()
