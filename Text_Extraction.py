@@ -229,11 +229,7 @@ def summarize_text_with_openai(text, extraction_method):
             temperature=0.3
         )
 
-        # Debug: Show successful API call
-        st.sidebar.success("✅ OpenAI API call successful!")
-        st.sidebar.write(f"🎯 Model used: {response.model}")
-        st.sidebar.write(f"💰 Tokens used: {response.usage.total_tokens}")
-
+        
         return response.choices[0].message.content.strip()
 
     except Exception as e:
