@@ -1,13 +1,12 @@
 import streamlit as st
 import requests
-import os
+import re
 from docx import Document
 import PyPDF2
 import pdfplumber
-import easyocr
+import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter
 from io import BytesIO
-import re
 
 # Load Groq API key from .streamlit/secrets.toml
 try:
@@ -15,11 +14,11 @@ try:
     if not GROQ_API_KEY:
         raise ValueError("API key is empty")
 except Exception as e:
-    st.error("❌ Groq API key not found! Please check your .streamlit/secrets.toml file.")
+    st.error("❌ Groq API key not found! Please check your secrets configuration.")
     st.info("""
-    **Setup Instructions:**
-    1. Create a file at: C:\\Users\\RohitReddy\\PyCharmMiscProject\\.streamlit\\secrets.toml
-    2. Add your key: groq_api_key = "your_actual_groq_key_here"
+    **Setup Instructions for Streamlit Cloud:**
+    1. Go to your app's settings in Streamlit Cloud.
+    2. Add to Secrets: groq_api_key = "your_actual_groq_key_here"
     """)
     st.stop()
 
@@ -33,16 +32,12 @@ def preprocess_image_for_ocr(image):
     image = enhancer.enhance(2)  # Increase contrast
     return image
 
-# OCR text extraction from an image
+# OCR text extraction from an image using pytesseract
 def extract_text_with_ocr(image):
     try:
-        reader = easyocr.Reader(['en'], gpu=False)
         processed_image = preprocess_image_for_ocr(image)
-        buffered = BytesIO()
-        processed_image.save(buffered, format="PNG")
-        img_bytes = buffered.getvalue()
-        results = reader.readtext(img_bytes, detail=0, paragraph=True)
-        return " ".join(results)
+        text = pytesseract.image_to_string(processed_image, lang='eng')
+        return text.strip()
     except Exception as e:
         st.error(f"OCR Error: {str(e)}")
         return ""
@@ -102,8 +97,10 @@ def extract_text_from_pdf_pages(file, page_numbers):
                         with pdfplumber.open(file) as pdf:
                             if page_num < len(pdf.pages):
                                 page = pdf.pages[page_num]
-                                pil_image = page.to_image(resolution=300).original
-                                page_text = extract_text_with_ocr(pil_image)
+                                page_text = page.extract_text() or ""
+                                if not page_text.strip():
+                                    pil_image = page.to_image(resolution=300).original
+                                    page_text = extract_text_with_ocr(pil_image)
                     except Exception:
                         pass
                 combined_text += f"\n--- Page {page_num + 1} ---\n{page_text}\n"
@@ -126,8 +123,10 @@ def extract_text_from_pdf(file):
             with pdfplumber.open(file) as pdf:
                 if len(pdf.pages) > 0:
                     page = pdf.pages[0]
-                    pil_image = page.to_image(resolution=300).original
-                    text = extract_text_with_ocr(pil_image)
+                    text = page.extract_text() or ""
+                    if not text.strip():
+                        pil_image = page.to_image(resolution=300).original
+                        text = extract_text_with_ocr(pil_image)
         except Exception as e:
             st.warning(f"OCR extraction failed: {str(e)}")
     return text.strip()
@@ -223,7 +222,7 @@ def main():
         3. **Generate** an AI summary
         4. **Download** your summary
         """)
-        st.header("⚙️ Enhanced Features")
+        st.header("⚙️ Features")
         st.markdown("""
         - ✅ OCR for scanned documents
         - ✅ Smart content detection
@@ -273,14 +272,11 @@ def main():
                         summary = summarize_text_with_groq(extracted_text, extraction_method)
 
                     st.subheader("📝 AI-Generated Summary")
-                    # Ensure bullet points are on new lines
                     if summary and not summary.startswith("❌"):
-                        # Split on various bullet point markers and ensure newlines
                         bullet_markers = ['•', '-', '*']
                         formatted_summary = summary
                         for marker in bullet_markers:
                             formatted_summary = formatted_summary.replace(f'{marker} ', f'\n{marker} ')
-                        # Ensure any remaining bullet points are split correctly
                         lines = [line.strip() for line in formatted_summary.split('\n') if line.strip()]
                         formatted_summary = '\n'.join([f"{line}" for line in lines if line.startswith(tuple(bullet_markers))])
                         st.markdown(formatted_summary)
@@ -299,7 +295,7 @@ def main():
                             use_container_width=True
                         )
         else:
-            st.error("❌ Unable to extract readable text.")
+            st.error("❌ Unable to extract readable text. Try a different file.")
 
 if __name__ == "__main__":
     main()
