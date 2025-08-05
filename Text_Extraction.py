@@ -1,5 +1,4 @@
 import streamlit as st
-import requests
 import re
 from docx import Document
 import PyPDF2
@@ -7,22 +6,21 @@ import pdfplumber
 import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter
 from io import BytesIO
+import openai
 
 # Load OpenAI API key from .streamlit/secrets.toml
 try:
-    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-    if not OPENAI_API_KEY:
+    openai.api_key = st.secrets["OPENAI_API_KEY"]
+    if not openai.api_key:
         raise ValueError("API key is empty")
 except Exception as e:
     st.error("❌ OpenAI API key not found! Please check your secrets configuration.")
     st.info("""
     **Setup Instructions for Streamlit Cloud:**
     1. Go to your app's settings in Streamlit Cloud.
-    2. Add to Secrets: openai_api_key = "your_actual_openai_key_here"
+    2. Add to Secrets: OPENAI_API_KEY = "your_actual_openai_key_here"
     """)
     st.stop()
-
-OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 
 # Function to clean and enhance image for better OCR
 def preprocess_image_for_ocr(image):
@@ -172,12 +170,9 @@ def extract_text_smart(file, file_type):
     extraction_log.append("📄 Using first page content as fallback")
     return first_page_text, extraction_log, "first_page_fallback"
 
+# Summarization using OpenAI SDK
 def summarize_text_with_openai(text, extraction_method):
     try:
-        headers = {
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json"
-        }
         if extraction_method == "index_pages":
             system_prompt = """You are a helpful assistant that creates clear, concise summaries. 
             The text provided appears to be from a table of contents or index section. 
@@ -190,21 +185,20 @@ def summarize_text_with_openai(text, extraction_method):
             Always format your response with each bullet point on a separate line using the format: - Bullet point text."""
             user_prompt = f"""Please summarize the following text in 3-5 bullet points:
             {text}"""
-        payload = {
-            "model": "gpt-4o-mini",  # Using a lightweight OpenAI model
-            "messages": [
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            "max_tokens": 500,
-            "temperature": 0.3
-        }
-        response = requests.post(OPENAI_API_URL, headers=headers, json=payload, timeout=30)
-        if response.status_code == 200:
-            return response.json()["choices"][0]["message"]["content"].strip()
-        else:
-            return f"❌ Error from OpenAI API (Status {response.status_code}): {response.text}"
-    except requests.exceptions.Timeout:
+            max_tokens=500,
+            temperature=0.3
+        )
+
+        return response.choices[0].message["content"].strip()
+
+    except openai.error.Timeout:
         return "❌ Request timed out. Please try again."
     except Exception as e:
         return f"❌ API Error: {str(e)}"
