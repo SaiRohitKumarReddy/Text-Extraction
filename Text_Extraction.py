@@ -8,30 +8,13 @@ from PIL import Image, ImageEnhance, ImageFilter
 from io import BytesIO
 from openai import OpenAI  # Updated import
 
-# Debug information - Add this at the top to confirm which version is running
-st.sidebar.success("✅ Using NEW OpenAI API (v1.0+)")
-st.sidebar.info("🔧 Debug Mode Active")
-
 # Initialize OpenAI client with API key from .streamlit/secrets.toml
 try:
     api_key = st.secrets["OPENAI_API_KEY"]
     if not api_key:
         raise ValueError("API key is empty")
     
-    # Debug: Show first/last 4 characters of API key
-    masked_key = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "KEY_TOO_SHORT"
-    st.sidebar.write(f"🔑 API Key: {masked_key}")
-    
-    # Verify this is an OpenAI key (OpenAI keys start with 'sk-')
-    if not api_key.startswith('sk-'):
-        st.sidebar.error("⚠️ WARNING: This doesn't look like an OpenAI API key!")
-        st.sidebar.info("OpenAI keys start with 'sk-'")
-    else:
-        st.sidebar.success("✅ API key format looks correct")
-    
-    client = OpenAI(api_key=api_key)  # Create client instance
-    st.sidebar.success("✅ OpenAI client initialized successfully")
-    
+    client = OpenAI(api_key=api_key)  # Create client instance  
 except Exception as e:
     st.error("❌ OpenAI API key not found! Please check your secrets configuration.")
     st.error(f"Error details: {str(e)}")
