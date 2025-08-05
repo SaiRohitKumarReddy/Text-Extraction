@@ -8,21 +8,21 @@ import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter
 from io import BytesIO
 
-# Load Groq API key from .streamlit/secrets.toml
+# Load OpenAI API key from .streamlit/secrets.toml
 try:
-    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-    if not GROQ_API_KEY:
+    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+    if not OPENAI_API_KEY:
         raise ValueError("API key is empty")
 except Exception as e:
-    st.error("❌ Groq API key not found! Please check your secrets configuration.")
+    st.error("❌ OpenAI API key not found! Please check your secrets configuration.")
     st.info("""
     **Setup Instructions for Streamlit Cloud:**
     1. Go to your app's settings in Streamlit Cloud.
-    2. Add to Secrets: groq_api_key = "your_actual_groq_key_here"
+    2. Add to Secrets: openai_api_key = "your_actual_openai_key_here"
     """)
     st.stop()
 
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 
 # Function to clean and enhance image for better OCR
 def preprocess_image_for_ocr(image):
@@ -172,10 +172,10 @@ def extract_text_smart(file, file_type):
     extraction_log.append("📄 Using first page content as fallback")
     return first_page_text, extraction_log, "first_page_fallback"
 
-def summarize_text_with_groq(text, extraction_method):
+def summarize_text_with_openai(text, extraction_method):
     try:
         headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
             "Content-Type": "application/json"
         }
         if extraction_method == "index_pages":
@@ -191,7 +191,7 @@ def summarize_text_with_groq(text, extraction_method):
             user_prompt = f"""Please summarize the following text in 3-5 bullet points:
             {text}"""
         payload = {
-            "model": "llama3-70b-8192",
+            "model": "gpt-4o-mini",  # Using a lightweight OpenAI model
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -199,11 +199,11 @@ def summarize_text_with_groq(text, extraction_method):
             "max_tokens": 500,
             "temperature": 0.3
         }
-        response = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=30)
+        response = requests.post(OPENAI_API_URL, headers=headers, json=payload, timeout=30)
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"].strip()
         else:
-            return f"❌ Error from Groq API (Status {response.status_code}): {response.text}"
+            return f"❌ Error from OpenAI API (Status {response.status_code}): {response.text}"
     except requests.exceptions.Timeout:
         return "❌ Request timed out. Please try again."
     except Exception as e:
@@ -269,7 +269,7 @@ def main():
                     st.warning("⚠️ Text too short for summarization.")
                 else:
                     with st.spinner("🤖 Generating AI summary..."):
-                        summary = summarize_text_with_groq(extracted_text, extraction_method)
+                        summary = summarize_text_with_openai(extracted_text, extraction_method)
 
                     st.subheader("📝 AI-Generated Summary")
                     if summary and not summary.startswith("❌"):
