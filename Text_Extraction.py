@@ -6,13 +6,14 @@ import pdfplumber
 import pytesseract
 from PIL import Image, ImageEnhance, ImageFilter
 from io import BytesIO
-import openai
+from openai import OpenAI  # Updated import
 
-# Load OpenAI API key from .streamlit/secrets.toml
+# Initialize OpenAI client with API key from .streamlit/secrets.toml
 try:
-    openai.api_key = st.secrets["OPENAI_API_KEY"]
-    if not openai.api_key:
+    api_key = st.secrets["OPENAI_API_KEY"]
+    if not api_key:
         raise ValueError("API key is empty")
+    client = OpenAI(api_key=api_key)  # Create client instance
 except Exception:
     st.error("❌ OpenAI API key not found! Please check your secrets configuration.")
     st.info("""
@@ -192,7 +193,7 @@ def extract_text_smart(file, file_type):
 
 
 # -------------------------
-# OpenAI Summarization
+# OpenAI Summarization (Updated for new API)
 # -------------------------
 def summarize_text_with_openai(text, extraction_method):
     try:
@@ -209,7 +210,8 @@ def summarize_text_with_openai(text, extraction_method):
             user_prompt = f"""Please summarize the following text in 3-5 bullet points:
             {text}"""
 
-        response = openai.ChatCompletion.create(
+        # Updated API call using the new client syntax
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -219,12 +221,20 @@ def summarize_text_with_openai(text, extraction_method):
             temperature=0.3
         )
 
-        return response.choices[0].message["content"].strip()
+        return response.choices[0].message.content.strip()
 
-    except openai.APITimeoutError:
-        return "❌ Request timed out. Please try again."
     except Exception as e:
-        return f"❌ API Error: {str(e)}"
+        error_message = str(e)
+        if "timeout" in error_message.lower():
+            return "❌ Request timed out. Please try again."
+        elif "rate limit" in error_message.lower():
+            return "❌ Rate limit exceeded. Please wait a moment and try again."
+        elif "insufficient_quota" in error_message.lower():
+            return "❌ API quota exceeded. Please check your OpenAI account balance."
+        elif "invalid_api_key" in error_message.lower():
+            return "❌ Invalid API key. Please check your OpenAI API key configuration."
+        else:
+            return f"❌ API Error: {error_message}"
 
 
 # -------------------------
