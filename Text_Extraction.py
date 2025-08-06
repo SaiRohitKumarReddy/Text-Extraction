@@ -257,19 +257,19 @@ def main():
     st.markdown("*Enhanced OCR + AI-powered summarization with intelligent content detection*")
 
     with st.sidebar:
-        st.header("📋 Instructions")
+        st.header("Instructions")
         st.markdown("""
         1. **Upload** a PDF or DOCX file
         2. **Review** the extracted text
         3. **Generate** an AI summary
         4. **Download** your summary
         """)
-        st.header("⚙️ Features")
+        st.header("Features")
         st.markdown("""
-        - ✅ OCR for scanned documents
-        - ✅ Smart content detection
-        - ✅ Index/TOC reading
-        - ✅ AI summarization
+        - OCR for scanned documents
+        - Smart content detection
+        - Index/TOC reading
+        - AI summarization
         """)
 
     uploaded_file = st.file_uploader("Choose a file to summarize", type=["pdf", "docx"])
