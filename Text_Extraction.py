@@ -16,7 +16,7 @@ try:
     
     client = OpenAI(api_key=api_key)  # Create client instance  
 except Exception as e:
-    st.error("❌ OpenAI API key not found! Please check your secrets configuration.")
+    st.error(" OpenAI API key not found! Please check your secrets configuration.")
     st.error(f"Error details: {str(e)}")
     st.info("""
     **Setup Instructions for Streamlit Cloud:**
@@ -162,19 +162,19 @@ def extract_text_from_docx(file):
 # -------------------------
 def extract_text_smart(file, file_type):
     extraction_log = []
-    extraction_log.append("🔍 Attempting to extract text from first page...")
+    extraction_log.append(" Attempting to extract text from first page...")
     if file_type == 'pdf':
         first_page_text = extract_text_from_pdf(file)
     else:
         first_page_text = extract_text_from_docx(file)
     if is_text_substantial(first_page_text):
-        extraction_log.append("✅ First page contains substantial content")
+        extraction_log.append(" First page contains substantial content")
         return first_page_text, extraction_log, "first_page"
 
-    extraction_log.append("⚠️ First page has limited content, searching for index/table of contents...")
+    extraction_log.append("⚠ First page has limited content, searching for index/table of contents...")
     index_pages = find_index_pages(file, file_type)
     if index_pages:
-        extraction_log.append(f"📖 Found potential index pages: {[p + 1 for p in index_pages]}")
+        extraction_log.append(f" Found potential index pages: {[p + 1 for p in index_pages]}")
         if file_type == 'pdf':
             index_text = extract_text_from_pdf_pages(file, index_pages[:3])
         else:
@@ -183,12 +183,12 @@ def extract_text_smart(file, file_type):
             full_text = "\n".join([para.text for para in doc.paragraphs[:100] if para.text.strip()])
             index_text = full_text[:3000]
         if is_text_substantial(index_text):
-            extraction_log.append("✅ Successfully extracted content from index pages")
+            extraction_log.append(" Successfully extracted content from index pages")
             return index_text, extraction_log, "index_pages"
         else:
-            extraction_log.append("❌ Index pages also contain limited content")
+            extraction_log.append(" Index pages also contain limited content")
     else:
-        extraction_log.append("❌ No index/table of contents found")
+        extraction_log.append(" No index/table of contents found")
 
     extraction_log.append("📄 Using first page content as fallback")
     return first_page_text, extraction_log, "first_page_fallback"
@@ -216,7 +216,7 @@ def summarize_text_with_openai(text, extraction_method):
             {text}"""
 
         # Debug: Show which API endpoint is being called
-        st.sidebar.write("🔄 Calling OpenAI API...")
+        st.sidebar.write(" Calling OpenAI API...")
         
         # Updated API call using the new client syntax
         response = client.chat.completions.create(
@@ -234,26 +234,26 @@ def summarize_text_with_openai(text, extraction_method):
 
     except Exception as e:
         error_message = str(e)
-        st.sidebar.error(f"❌ API Error: {error_message}")
+        st.sidebar.error(f" API Error: {error_message}")
         
         if "timeout" in error_message.lower():
-            return "❌ Request timed out. Please try again."
+            return " Request timed out. Please try again."
         elif "rate limit" in error_message.lower():
-            return "❌ Rate limit exceeded. Please wait a moment and try again."
+            return " Rate limit exceeded. Please wait a moment and try again."
         elif "insufficient_quota" in error_message.lower():
-            return "❌ API quota exceeded. Please check your OpenAI account balance."
+            return " API quota exceeded. Please check your OpenAI account balance."
         elif "invalid_api_key" in error_message.lower():
-            return "❌ Invalid API key. Please check your OpenAI API key configuration."
+            return " Invalid API key. Please check your OpenAI API key configuration."
         else:
-            return f"❌ API Error: {error_message}"
+            return f" API Error: {error_message}"
 
 
 # -------------------------
 # Streamlit UI
 # -------------------------
 def main():
-    st.set_page_config(page_title="Smart Document Summarizer", page_icon="📄", layout="wide")
-    st.title("📄 Smart Document Summarizer")
+    st.set_page_config(page_title="Smart Document Summarizer", layout="wide")
+    st.title(" Smart Document Summarizer")
     st.markdown("*Enhanced OCR + AI-powered summarization with intelligent content detection*")
 
     with st.sidebar:
@@ -268,7 +268,7 @@ def main():
         st.markdown("""
         - OCR for scanned documents
         - Smart content detection
-        - Index/TOC reading
+        - Index/Table of Content reading
         - AI summarization
         """)
 
@@ -284,36 +284,36 @@ def main():
             file_extension = uploaded_file.name.split(".")[-1].upper()
             st.metric("File Type", file_extension)
 
-        with st.spinner("🔍 Analyzing document..."):
+        with st.spinner("Analyzing document..."):
             extracted_text, extraction_log, extraction_method = extract_text_smart(uploaded_file, file_extension.lower())
 
-        with st.expander("📋 Extraction Process Log", expanded=False):
+        with st.expander(" Extraction Process Log", expanded=False):
             for log_entry in extraction_log:
                 st.write(log_entry)
 
         if extracted_text:
             method_info = {
-                "first_page": "✅ First Page Content",
-                "index_pages": "📖 Table of Contents/Index",
-                "first_page_fallback": "📄 First Page (Limited Content)"
+                "first_page": "First Page Content",
+                "index_pages": "Table of Contents/Index",
+                "first_page_fallback": "First Page (Limited Content)"
             }
             st.info(f"**Content Source:** {method_info.get(extraction_method, 'Unknown')}")
 
-            st.subheader("📜 Extracted Text")
+            st.subheader("Extracted Text")
             word_count = len(re.findall(r'\b\w+\b', extracted_text))
-            st.info(f"📊 Extracted {len(extracted_text)} characters ({word_count} words)")
+            st.info(f"Extracted {len(extracted_text)} characters ({word_count} words)")
 
-            with st.expander("🔍 View extracted text", expanded=False):
+            with st.expander(" View extracted text", expanded=False):
                 st.text_area("Extracted Content", extracted_text, height=300, disabled=True)
 
-            if st.button("✨ Generate AI Summary", type="primary", use_container_width=True):
+            if st.button("Generate AI Summary", type="primary", use_container_width=True):
                 if len(extracted_text.strip()) < 20:
-                    st.warning("⚠️ Text too short for summarization.")
+                    st.warning("Text too short for summarization.")
                 else:
-                    with st.spinner("🤖 Generating AI summary..."):
+                    with st.spinner(" Generating AI summary..."):
                         summary = summarize_text_with_openai(extracted_text, extraction_method)
 
-                    st.subheader("📝 AI-Generated Summary")
+                    st.subheader(" AI-Generated Summary")
                     if summary and not summary.startswith("❌"):
                         bullet_markers = ['•', '-', '*']
                         formatted_summary = summary
@@ -337,7 +337,7 @@ def main():
                             use_container_width=True
                         )
         else:
-            st.error("❌ Unable to extract readable text. Try a different file.")
+            st.error(" Unable to extract readable text. Try a different file.")
 
 
 if __name__ == "__main__":
