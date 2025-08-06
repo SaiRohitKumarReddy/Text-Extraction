@@ -171,7 +171,7 @@ def extract_text_smart(file, file_type):
         extraction_log.append(" First page contains substantial content")
         return first_page_text, extraction_log, "first_page"
 
-    extraction_log.append("⚠ First page has limited content, searching for index/table of contents...")
+    extraction_log.append("First page has limited content, searching for index/table of contents...")
     index_pages = find_index_pages(file, file_type)
     if index_pages:
         extraction_log.append(f" Found potential index pages: {[p + 1 for p in index_pages]}")
@@ -190,7 +190,7 @@ def extract_text_smart(file, file_type):
     else:
         extraction_log.append(" No index/table of contents found")
 
-    extraction_log.append("📄 Using first page content as fallback")
+    extraction_log.append("Using first page content as fallback")
     return first_page_text, extraction_log, "first_page_fallback"
 
 
@@ -199,7 +199,7 @@ def extract_text_smart(file, file_type):
 # -------------------------
 def summarize_text_with_openai(text, extraction_method):
     # Debug info
-    st.info("🤖 Making API call to OpenAI...")
+    st.info("Making API call to OpenAI...")
     
     try:
         if extraction_method == "index_pages":
@@ -330,7 +330,7 @@ def main():
                         filename = f"summary_{uploaded_file.name.split('.')[0]}{method_suffix}.txt"
                         download_content = f"Document: {uploaded_file.name}\nContent Source: {method_info.get(extraction_method, 'Unknown')}\nSUMMARY:\n" + summary
                         st.download_button(
-                            label="📥 Download Summary",
+                            label=" Download Summary",
                             data=download_content,
                             file_name=filename,
                             mime="text/plain",
